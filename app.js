@@ -42,30 +42,42 @@ function calculateRegenBasalArea(countValue, typeValue) {
 // ==========================================================================
 async function fetchTreeCloudRecords() {
   try {
+    // FIXED: Performs relational inner-join to pull live catalog string maps instead of text species
     const { data, error } = await _supabase
       .from("mangrove_trees")
-      .select("*, mangrove_stems(*)")
+      .select(
+        "id, transect_number, plot_number, species_id, mangrove_species_catalog(botanical_name, common_name), mangrove_stems(*)",
+      )
       .order("transect_number", { ascending: true })
       .order("plot_number", { ascending: true })
       .order("id", { ascending: false });
 
     if (error) throw error;
 
-    mangroveRecords = data.map((tree) => ({
-      id: tree.id,
-      species: tree.species,
-      transect: tree.transect_number,
-      plot: tree.plot_number,
-      stems: tree.mangrove_stems
-        .sort((a, b) => a.id - b.id)
-        .map((stem) => ({
-          id: stem.id,
-          label: stem.label,
-          gbh: Number(stem.gbh).toFixed(1),
-          dbh: Number(stem.dbh).toFixed(8),
-          basalArea: Number(stem.basal_area).toFixed(8),
-        })),
-    }));
+    mangroveRecords = data.map((tree) => {
+      const catalog = tree.mangrove_species_catalog;
+      const dynamicLabel = catalog
+        ? catalog.common_name && catalog.common_name !== "Unclassified"
+          ? `${catalog.botanical_name} (${catalog.common_name})`
+          : catalog.botanical_name
+        : "Unassigned Species";
+
+      return {
+        id: tree.id,
+        species: dynamicLabel,
+        transect: tree.transect_number,
+        plot: tree.plot_number,
+        stems: tree.mangrove_stems
+          .sort((a, b) => a.id - b.id)
+          .map((stem) => ({
+            id: stem.id,
+            label: stem.label,
+            gbh: Number(stem.gbh).toFixed(1),
+            dbh: Number(stem.dbh).toFixed(8),
+            basalArea: Number(stem.basal_area).toFixed(8),
+          })),
+      };
+    });
     renderTreeTable();
   } catch (err) {
     console.error("Tree synchronization read breakdown exception:", err);
@@ -109,11 +121,16 @@ function renderTreeTable() {
         `;
     datasetBody.appendChild(summaryRow);
 
-    tree.stems.forEach((stem) => {
+    // FIXED: Use the loop array index to dynamically calculate sequential stem numbers
+    tree.stems.forEach((stem, index) => {
       const stemRow = document.createElement("tr");
       stemRow.className = "sub-branch-row text-secondary";
+
+      const dynamicLabel =
+        index === 0 ? "Main Trunk (Stem 1)" : `Branch Stem ${index + 1}`;
+
       stemRow.innerHTML = `
-                <td class="ps-5 text-muted small"><i class="fa-solid fa-turn-up fa-rotate-90 me-2 text-secondary"></i>${stem.label}</td>
+                <td class="ps-5 text-muted small"><i class="fa-solid fa-turn-up fa-rotate-90 me-2 text-secondary"></i>${dynamicLabel}</td>
                 <td class="font-monospace">${stem.gbh}</td>
                 <td class="font-monospace"><span class="badge badge-branch-calc">${stem.dbh}</span></td>
                 <td class="font-monospace">${stem.basalArea}</td>
@@ -129,88 +146,45 @@ function renderTreeTable() {
 // ==========================================================================
 async function fetchRegenCloudRecords() {
   try {
+    // FIXED: Added mangrove_species_catalog relational link targeting join query logic pipelines
     const { data, error } = await _supabase
       .from("mangrove_regeneration")
-      .select("*")
+      .select("*, mangrove_species_catalog(botanical_name, common_name)")
       .order("transect_number", { ascending: true })
       .order("plot_number", { ascending: true });
 
     if (error) throw error;
 
+    const mapRelationalRecord = (record) => {
+      const catalog = record.mangrove_species_catalog;
+      const dynamicLabel = catalog
+        ? catalog.common_name && catalog.common_name !== "Unclassified"
+          ? `${catalog.botanical_name} (${catalog.common_name})`
+          : catalog.botanical_name
+        : "Unassigned Species";
+
+      return {
+        id: record.id,
+        species_id: record.species_id, // Expose ID properties for cross-component duplicate verification loops
+        species: dynamicLabel,
+        transect: record.transect_number,
+        plot: record.plot_number,
+        type: record.type,
+        count: record.total_count,
+        basalArea: Number(record.basal_area).toFixed(8),
+      };
+    };
+
     saplingRecords = data
       .filter((r) => r.type === "Sapling")
-      .map((record) => ({
-        id: record.id,
-        species: record.species,
-        transect: record.transect_number,
-        plot: record.plot_number,
-        type: record.type,
-        count: record.total_count,
-        basalArea: Number(record.basal_area).toFixed(8),
-      }));
-
+      .map(mapRelationalRecord);
     wildingRecords = data
       .filter((r) => r.type === "Wilding")
-      .map((record) => ({
-        id: record.id,
-        species: record.species,
-        transect: record.transect_number,
-        plot: record.plot_number,
-        type: record.type,
-        count: record.total_count,
-        basalArea: Number(record.basal_area).toFixed(8),
-      }));
+      .map(mapRelationalRecord);
 
     renderRegenTables();
   } catch (err) {
     console.error("Regeneration engine mapping pipeline failure:", err);
-  }
-}
-
-function renderRegenTables() {
-  const saplingBody = document.getElementById("saplingTableBody");
-  const wildingBody = document.getElementById("wildingTableBody");
-  const saplingCounter = document.getElementById("saplingCounter");
-  const wildingCounter = document.getElementById("wildingCounter");
-
-  if (saplingBody && saplingCounter) {
-    saplingCounter.textContent = `Total Rows: ${saplingRecords.length}`;
-    if (saplingRecords.length === 0) {
-      saplingBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4 fw-medium">No sapling records located.</td></tr>`;
-    } else {
-      saplingBody.innerHTML = "";
-      saplingRecords.forEach((record) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-                    <td class="ps-3 fw-bold text-dark"><span class="badge bg-dark me-2">T${record.transect} - P${record.plot}</span>${record.species}</td>
-                    <td><span class="badge-type badge-sapling"><i class="fa-solid fa-baby-carriage me-1"></i>Sapling</span></td>
-                    <td class="font-monospace fw-semibold">${record.count}</td>
-                    <td class="font-monospace fw-bold text-success">${record.basalArea}</td>
-                    <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="deleteRegenEntry(${record.id})"><i class="fa-solid fa-trash-can"></i></button></td>
-                `;
-        saplingBody.appendChild(row);
-      });
-    }
-  }
-
-  if (wildingBody && wildingCounter) {
-    wildingCounter.textContent = `Total Rows: ${wildingRecords.length}`;
-    if (wildingRecords.length === 0) {
-      wildingBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4 fw-medium">No wilding records located.</td></tr>`;
-    } else {
-      wildingBody.innerHTML = "";
-      wildingRecords.forEach((record) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-                    <td class="ps-3 fw-bold text-dark"><span class="badge bg-dark me-2">T${record.transect} - P${record.plot}</span>${record.species}</td>
-                    <td><span class="badge-type badge-wilding"><i class="fa-solid fa-shuttle-space me-1"></i>Wilding</span></td>
-                    <td class="font-monospace fw-semibold">${record.count}</td>
-                    <td class="font-monospace fw-bold text-success">${record.basalArea}</td>
-                    <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="deleteRegenEntry(${record.id})"><i class="fa-solid fa-trash-can"></i></button></td>
-                `;
-        wildingBody.appendChild(row);
-      });
-    }
   }
 }
 
@@ -222,15 +196,18 @@ async function generateConsolidatedReport() {
   if (!ledgerSection) return;
 
   try {
+    // FIXED: Performs join fetches over target reference IDs across structural parameters models
     const [treeFetch, regenFetch] = await Promise.all([
       _supabase
         .from("mangrove_trees")
         .select(
-          "species, transect_number, plot_number, mangrove_stems(basal_area)",
+          "transect_number, plot_number, mangrove_species_catalog(botanical_name, common_name), mangrove_stems(basal_area)",
         ),
       _supabase
         .from("mangrove_regeneration")
-        .select("species, type, transect_number, plot_number, basal_area"),
+        .select(
+          "type, transect_number, plot_number, basal_area, mangrove_species_catalog(botanical_name, common_name)",
+        ),
     ]);
 
     if (treeFetch.error) throw treeFetch.error;
@@ -240,17 +217,27 @@ async function generateConsolidatedReport() {
     let globalTotalBa = 0;
     let globalTotalStands = 0;
 
-    // 1. Accumulate Tree Stems into local location matrices
+    const parseCatalogLabel = (catalogObj) => {
+      if (!catalogObj) return "Unassigned Species";
+      return catalogObj.common_name && catalogObj.common_name !== "Unclassified"
+        ? `${catalogObj.botanical_name} (${catalogObj.common_name})`
+        : catalogObj.botanical_name;
+    };
+
+    // 1. Accumulate Tree Stems into local location matrices via Dynamic Relational Joins labels
     treeFetch.data.forEach((tree) => {
       const tNum = tree.transect_number || 1;
       const pNum = tree.plot_number || 1;
       const locKey = `Transect ${tNum} — Plot ${pNum}`;
-      const itemKey = `${tree.species}==Tree`;
+      const resolvedNameLabel = parseCatalogLabel(
+        tree.mangrove_species_catalog,
+      );
+      const itemKey = `${resolvedNameLabel}==Tree`;
 
       if (!structuredPlotsMap[locKey]) structuredPlotsMap[locKey] = {};
       if (!structuredPlotsMap[locKey][itemKey]) {
         structuredPlotsMap[locKey][itemKey] = {
-          species: tree.species,
+          species: resolvedNameLabel,
           type: "Tree",
           totalBA: 0,
         };
@@ -265,18 +252,21 @@ async function generateConsolidatedReport() {
       }
     });
 
-    // 2. Accumulate Saplings and Wildings into local location matrices
+    // 2. Accumulate Saplings and Wildings into local location matrices via Dynamic Relational Joins labels
     regenFetch.data.forEach((regen) => {
       const tNum = regen.transect_number || 1;
       const pNum = regen.plot_number || 1;
       const locKey = `Transect ${tNum} — Plot ${pNum}`;
-      const itemKey = `${regen.species}==${regen.type}`;
+      const resolvedNameLabel = parseCatalogLabel(
+        regen.mangrove_species_catalog,
+      );
+      const itemKey = `${resolvedNameLabel}==${regen.type}`;
       const ba = parseFloat(regen.basal_area || 0);
 
       if (!structuredPlotsMap[locKey]) structuredPlotsMap[locKey] = {};
       if (!structuredPlotsMap[locKey][itemKey]) {
         structuredPlotsMap[locKey][itemKey] = {
-          species: regen.species,
+          species: resolvedNameLabel,
           type: regen.type,
           totalBA: 0,
         };
@@ -286,7 +276,6 @@ async function generateConsolidatedReport() {
       globalTotalBa += ba;
     });
 
-    // Wipe layout containers bare to remove loading text completely
     ledgerSection.innerHTML = "";
 
     const sortedLocations = Object.keys(structuredPlotsMap).sort((a, b) => {
@@ -306,7 +295,6 @@ async function generateConsolidatedReport() {
       globalTotalStands++;
       const plotDataRows = structuredPlotsMap[locationTitle];
 
-      // Plot-specific counter variables
       let plotTotalBa = 0;
       let plotTotalSba = 0;
 
@@ -338,7 +326,6 @@ async function generateConsolidatedReport() {
           const item = plotDataRows[itemKey];
           const computedSba = item.totalBA / 100;
 
-          // Sum plot-specific aggregates
           plotTotalBa += item.totalBA;
           plotTotalSba += computedSba;
 
@@ -359,7 +346,6 @@ async function generateConsolidatedReport() {
         `;
         });
 
-      // FIXED: Appends a high-visibility, calculation summary summary row right inside this table's footer block
       innerHTMLMarkup += `
                 <tr class="table-success border-top border-dark border-2">
                     <td colspan="2" class="ps-2 fw-bold text-uppercase text-success">
@@ -377,7 +363,6 @@ async function generateConsolidatedReport() {
       ledgerSection.appendChild(tableWrapper);
     });
 
-    // Synchronize top statistics cards display calculations
     const globalTotalSba = globalTotalBa / 100;
     document.getElementById("statTotalStands").textContent = globalTotalStands;
     document.getElementById("statTotalBa").textContent =
@@ -393,6 +378,10 @@ async function generateConsolidatedReport() {
 // ==========================================================================
 // CENTRALIZED SPECIES CATALOG LOGIC SEED ENGINE
 // ==========================================================================
+/**
+ * Dynamically populates any HTML select dropdown item with rows from the Supabase catalog
+ * @param {string} selectElementId - The DOM ID of the target <select> element
+ */
 async function populateSpeciesDropdown(selectElementId) {
   const dropdown = document.getElementById(selectElementId);
   if (!dropdown) return;
@@ -416,8 +405,8 @@ async function populateSpeciesDropdown(selectElementId) {
           ? `${item.botanical_name} (${item.common_name})`
           : item.botanical_name;
 
-      option.value = fullLabel;
-      option.textContent = fullLabel;
+      option.value = item.id; // FIXED: Underlying value is now the numeric database ID
+      option.textContent = fullLabel; // The visible text remains the text name string
       dropdown.appendChild(option);
     });
   } catch (err) {
@@ -442,7 +431,6 @@ async function injectGlobalSidebar() {
     const markup = await response.text();
     sidebarContainer.innerHTML = markup;
 
-    // Automatically detect current view state filename to set active highlight properties
     const currentPath =
       window.location.pathname.split("/").pop() || "tree.html";
     const matchingLink = sidebarContainer.querySelector(
@@ -452,9 +440,6 @@ async function injectGlobalSidebar() {
     if (matchingLink) {
       matchingLink.classList.add("active");
     }
-    console.log(
-      `LOG MODULE: Sidebar loaded and synced to active view state: "${currentPath}"`,
-    );
   } catch (err) {
     console.error(
       "CRITICAL FRAMEWORK BREAKDOWN: Unable to fetch sidebar template component:",
@@ -463,26 +448,8 @@ async function injectGlobalSidebar() {
   }
 }
 
-// Automatically trigger injection whenever DOM load events complete across tracking screens
 document.addEventListener("DOMContentLoaded", injectGlobalSidebar);
 
-// ==========================================================================
-// SESSION SECURITY LOGOUT ROUTER
-// ==========================================================================
-async function terminateUserSession() {
-  try {
-    const { error } = await _supabase.auth.signOut();
-    if (error) throw error;
-
-    // Return to login screen entry page node
-    window.location.href = "index.html";
-  } catch (err) {
-    console.error(
-      "SESSION ERROR: Unable to securely clear session tokens:",
-      err,
-    );
-  }
-}
 // ==========================================================================
 // PORTAL SECURE SECURITY SESSION INTERCEPT GUARD
 // ==========================================================================

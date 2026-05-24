@@ -286,10 +286,13 @@
           });
 
         // Form submission database router pipeline with duplicate validation guard rules
+        // Replace ONLY the form submission block inside saplings_wildings.html script block
         regenForm.addEventListener("submit", async function (e) {
           e.preventDefault();
 
-          const species = document.getElementById("speciesName").value;
+          const speciesIdSelected = parseInt(
+            document.getElementById("speciesName").value,
+          ); // Gets numeric ID
           const transectNum = parseInt(
             document.getElementById("transectNumber").value,
           );
@@ -298,29 +301,23 @@
           const typeValue = document.querySelector(
             'input[name="regenType"]:checked',
           ).value;
-
-          // FIXED: Now accurately passes the selection type parameter to evaluate separate formula paths
           const calculatedBa = calculateRegenBasalArea(count, typeValue);
 
+          // Checks for duplicates based on your relational reference ID parameters
           const combinedRecordsList = [...saplingRecords, ...wildingRecords];
           const duplicateExists = combinedRecordsList.some(
             (r) =>
               parseInt(r.transect) === transectNum &&
               parseInt(r.plot) === plotNum &&
               r.type === typeValue &&
-              r.species === species,
+              r.species_id === speciesIdSelected,
           );
 
           if (duplicateExists) {
-            console.warn(
-              `LOG BLOCKER: Terminating write. Duplicate entry found for Transect ${transectNum}, Plot ${plotNum}, Category: ${typeValue}, Species: ${species}`,
-            );
-
             Swal.fire({
               title: "Duplicate Detected",
-              text: `A record for Transect ${transectNum}, Plot ${plotNum} (${typeValue} - ${species.split(" ")[0]}) already exists inside the cloud database register ledger.`,
+              text: "This species record already exists for this specific plot.",
               icon: "warning",
-              confirmButtonColor: "#3085d6",
             });
             return;
           }
@@ -338,7 +335,7 @@
               .from("mangrove_regeneration")
               .insert([
                 {
-                  species: species,
+                  species_id: speciesIdSelected, // FIXED: Saves numeric reference ID
                   type: typeValue,
                   transect_number: transectNum,
                   plot_number: plotNum,
@@ -353,10 +350,8 @@
               document.getElementById("regenerationModal"),
             ).hide();
             await fetchRegenCloudRecords();
-
             Swal.fire({
               title: "Stock Record Logged!",
-              text: `Transect ${transectNum} Plot ${plotNum} saved cleanly.`,
               icon: "success",
               confirmButtonColor: "#198754",
             });
