@@ -17,6 +17,7 @@
   </head>
   <body>
     <div id="sidebar"></div>
+
     <div class="page-workspace">
       <div class="mobile-toggle-header">
         <h5 class="m-0 fw-bold">
@@ -245,7 +246,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=8point1"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const regenForm = document.getElementById("regenForm");
@@ -260,7 +261,6 @@
             previewBa.textContent = "—";
           });
 
-        // FIXED: Combined loop extracts the active categorization to update previews correctly
         function updateLivePreview() {
           const countVal = parseInt(totalCountInput.value);
           const activeRadio = document.querySelector(
@@ -285,14 +285,12 @@
             radio.addEventListener("change", updateLivePreview);
           });
 
-        // Form submission database router pipeline with duplicate validation guard rules
-        // Replace ONLY the form submission block inside saplings_wildings.html script block
         regenForm.addEventListener("submit", async function (e) {
           e.preventDefault();
 
           const speciesIdSelected = parseInt(
             document.getElementById("speciesName").value,
-          ); // Gets numeric ID
+          );
           const transectNum = parseInt(
             document.getElementById("transectNumber").value,
           );
@@ -303,7 +301,7 @@
           ).value;
           const calculatedBa = calculateRegenBasalArea(count, typeValue);
 
-          // Checks for duplicates based on your relational reference ID parameters
+          // FIXED: Scans array variables by relational species_id integer references
           const combinedRecordsList = [...saplingRecords, ...wildingRecords];
           const duplicateExists = combinedRecordsList.some(
             (r) =>
@@ -316,7 +314,7 @@
           if (duplicateExists) {
             Swal.fire({
               title: "Duplicate Detected",
-              text: "This species record already exists for this specific plot.",
+              text: "This species record already exists for this specific plot configuration.",
               icon: "warning",
             });
             return;
@@ -335,7 +333,7 @@
               .from("mangrove_regeneration")
               .insert([
                 {
-                  species_id: speciesIdSelected, // FIXED: Saves numeric reference ID
+                  species_id: speciesIdSelected,
                   type: typeValue,
                   transect_number: transectNum,
                   plot_number: plotNum,
@@ -350,6 +348,7 @@
               document.getElementById("regenerationModal"),
             ).hide();
             await fetchRegenCloudRecords();
+
             Swal.fire({
               title: "Stock Record Logged!",
               icon: "success",
@@ -379,6 +378,7 @@
         }
       }
 
+      // Initialize runtime data pipeline sync actions loops
       fetchRegenCloudRecords();
     </script>
   </body>
