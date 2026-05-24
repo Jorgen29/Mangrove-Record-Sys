@@ -423,6 +423,357 @@ async function generateConsolidatedReport() {
 }
 
 // ==========================================================================
+// PROJECT COMPONENT 4: MEAN VALUE ANALYSIS ENGINE (mean_value.html)
+// ==========================================================================
+async function generateMeanValueReport() {
+  const meanWorkspace = document.getElementById("meanWorkspace");
+  if (!meanWorkspace) return;
+
+  try {
+    // Fetch all logs using relational joins to grab the live catalog names
+    const [treeFetch, regenFetch] = await Promise.all([
+      _supabase
+        .from("mangrove_trees")
+        .select(
+          "mangrove_species_catalog(botanical_name, common_name), mangrove_stems(basal_area)",
+        ),
+      _supabase
+        .from("mangrove_regeneration")
+        .select(
+          "type, basal_area, mangrove_species_catalog(botanical_name, common_name)",
+        ),
+    ]);
+
+    if (treeFetch.error) throw treeFetch.error;
+    if (regenFetch.error) throw regenFetch.error;
+
+    // Separate dictionaries for each individual component type matrix
+    let categoriesMap = {
+      Tree: {},
+      Sapling: {},
+      Wilding: {},
+    };
+
+    const parseName = (catalog) => {
+      if (!catalog) return "Unassigned Species";
+      return catalog.common_name && catalog.common_name !== "Unclassified"
+        ? `${catalog.botanical_name} (${catalog.common_name})`
+        : catalog.botanical_name;
+    };
+
+    // 1. Accumulate Tree Stems into the Tree dictionary map
+    treeFetch.data.forEach((tree) => {
+      const resolvedName = parseName(tree.mangrove_species_catalog);
+      if (!categoriesMap["Tree"][resolvedName]) {
+        categoriesMap["Tree"][resolvedName] = {
+          species: resolvedName,
+          type: "Tree",
+          globalTotalBA: 0,
+        };
+      }
+      if (tree.mangrove_stems) {
+        tree.mangrove_stems.forEach((stem) => {
+          categoriesMap["Tree"][resolvedName].globalTotalBA += parseFloat(
+            stem.basal_area || 0,
+          );
+        });
+      }
+    });
+
+    // 2. Accumulate Regeneration stocks into Sapling or Wilding dictionaries respectively
+    regenFetch.data.forEach((regen) => {
+      const resolvedName = parseName(regen.mangrove_species_catalog);
+      const typeKey = regen.type; // "Sapling" or "Wilding"
+
+      if (categoriesMap[typeKey]) {
+        if (!categoriesMap[typeKey][resolvedName]) {
+          categoriesMap[typeKey][resolvedName] = {
+            species: resolvedName,
+            type: typeKey,
+            globalTotalBA: 0,
+          };
+        }
+        categoriesMap[typeKey][resolvedName].globalTotalBA += parseFloat(
+          regen.basal_area || 0,
+        );
+      }
+    });
+
+    // Reset layout elements
+    meanWorkspace.innerHTML = "";
+
+    // Running dashboard counters to sum EVERYTHING globally
+    let dynamicGlobalMeanBa = 0;
+    let dynamicGlobalMeanSba = 0;
+
+    // 3. Process, sum, and build individual category structures
+    const targetCategories = ["Tree", "Sapling", "Wilding"];
+
+    targetCategories.forEach((category) => {
+      const speciesRows = categoriesMap[category];
+      const sortedSpeciesKeys = Object.keys(speciesRows).sort();
+
+      if (sortedSpeciesKeys.length === 0) return;
+
+      let runningTableTotalBa = 0;
+      let runningTableTotalSba = 0;
+
+      const tableWrapper = document.createElement("div");
+
+      // FIXED: Dropped 'border-top' styling indicators from layout block wrapper containers
+      tableWrapper.className = "table-container mb-4 shadow-sm pb-1";
+
+      let iconMarkup =
+        category === "Tree"
+          ? '<i class="fa-solid fa-tree me-2 text-primary"></i>'
+          : category === "Sapling"
+            ? '<i class="fa-solid fa-baby-carriage me-2 text-info"></i>'
+            : '<i class="fa-solid fa-shuttle-space me-2 text-warning"></i>';
+
+      // FIXED: Swapped out table inner classes to remove borders natively
+      let innerHTMLMarkup = `
+        <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+            <h5 class="m-0 fw-bold text-dark">${iconMarkup}${category} Component Matrix</h5>
+            <span class="badge bg-dark px-2 py-1">Normalization: /8</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-borderless align-middle m-0">
+                <thead class="table-light text-uppercase small text-secondary">
+                    <tr>
+                        <th class="ps-3">Species Name Classification</th>
+                        <th style="width: 260px;">Mean Basal Area <span class="text-muted font-monospace">(cm²)</span></th>
+                        <th style="width: 260px;">Mean SBA <span class="text-muted font-monospace">(BA / 100)</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+      `;
+
+      sortedSpeciesKeys.forEach((speciesName) => {
+        const item = speciesRows[speciesName];
+        const meanBasalArea = item.globalTotalBA / 8;
+        const meanSba = meanBasalArea / 100;
+
+        runningTableTotalBa += meanBasalArea;
+        runningTableTotalSba += meanSba;
+
+        // Sum directly into global overview stats
+        dynamicGlobalMeanBa += meanBasalArea;
+        dynamicGlobalMeanSba += meanSba;
+
+        innerHTMLMarkup += `
+          <tr>
+            <td class="ps-3 fw-bold text-dark text-uppercase">${item.species}</td>
+            <td class="font-monospace fw-semibold text-success">${meanBasalArea.toFixed(8)}</td>
+            <td class="font-monospace fw-semibold text-dark">${meanSba.toFixed(8)}</td>
+          </tr>
+        `;
+      });
+
+      // Local Summary totals row remains borderless, styled cleanly with Bootstrap built-ins
+      innerHTMLMarkup += `
+                <tr class="table-success fw-bold">
+                    <td class="ps-3 text-uppercase text-success">
+                        <i class="fa-solid fa-calculator me-2"></i>${category} Summary Total
+                    </td>
+                    <td class="font-monospace text-success">${runningTableTotalBa.toFixed(8)}</td>
+                    <td class="font-monospace text-dark">${runningTableTotalSba.toFixed(8)}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+      `;
+
+      tableWrapper.innerHTML = innerHTMLMarkup;
+      meanWorkspace.appendChild(tableWrapper);
+    });
+
+    if (meanWorkspace.children.length === 0) {
+      meanWorkspace.innerHTML = `<div class="table-container text-center text-muted py-5">No survey records calculated inside cloud registers.</div>`;
+    }
+
+    // FIXED: Pushes calculation counters output metrics live into the 2 widget nodes
+    document.getElementById("widgetGlobalMeanBa").textContent =
+      dynamicGlobalMeanBa.toFixed(8);
+    document.getElementById("widgetGlobalMeanSba").textContent =
+      dynamicGlobalMeanSba.toFixed(8);
+  } catch (err) {
+    console.error("Mean Engine breakdown trace exception:", err);
+    meanWorkspace.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Error generating calculation matrices.</div>`;
+  }
+}
+
+// ==========================================================================
+// PROJECT COMPONENT 5: PLANT DENSITY ANALYSIS ENGINE (plant_density.html)
+// ==========================================================================
+async function generatePlantDensityReport() {
+  const densityWorkspace = document.getElementById("densityWorkspace");
+  if (!densityWorkspace) return;
+
+  try {
+    // Fetch all logs using relational joins to grab the live catalog names
+    const [treeFetch, regenFetch] = await Promise.all([
+      _supabase
+        .from("mangrove_trees")
+        .select(
+          "mangrove_species_catalog(botanical_name, common_name), mangrove_stems(id)",
+        ),
+      _supabase
+        .from("mangrove_regeneration")
+        .select(
+          "type, total_count, mangrove_species_catalog(botanical_name, common_name)",
+        ),
+    ]);
+
+    if (treeFetch.error) throw treeFetch.error;
+    if (regenFetch.error) throw regenFetch.error;
+
+    // Separate tracking dictionaries for each individual component type matrix
+    let densityMap = {
+      Tree: {},
+      Sapling: {},
+      Wilding: {},
+    };
+
+    const parseName = (catalog) => {
+      if (!catalog) return "Unassigned Species";
+      return catalog.common_name && catalog.common_name !== "Unclassified"
+        ? `${catalog.botanical_name} (${catalog.common_name})`
+        : catalog.botanical_name;
+    };
+
+    // 1. Process Tree Stems (Count every stem recorded under a species)
+    treeFetch.data.forEach((tree) => {
+      const resolvedName = parseName(tree.mangrove_species_catalog);
+      if (!densityMap["Tree"][resolvedName]) {
+        densityMap["Tree"][resolvedName] = {
+          species: resolvedName,
+          type: "Tree",
+          unitCount: 0,
+        };
+      }
+      if (tree.mangrove_stems) {
+        densityMap["Tree"][resolvedName].unitCount +=
+          tree.mangrove_stems.length;
+      }
+    });
+
+    // 2. Process Regeneration Stocks (Sum up the stored 'total_count' values)
+    regenFetch.data.forEach((regen) => {
+      const resolvedName = parseName(regen.mangrove_species_catalog);
+      const typeKey = regen.type;
+
+      if (densityMap[typeKey]) {
+        if (!densityMap[typeKey][resolvedName]) {
+          densityMap[typeKey][resolvedName] = {
+            species: resolvedName,
+            type: typeKey,
+            unitCount: 0,
+          };
+        }
+        densityMap[typeKey][resolvedName].unitCount += parseInt(
+          regen.total_count || 0,
+        );
+      }
+    });
+
+    densityWorkspace.innerHTML = "";
+
+    // Global dashboard tracking counters across ALL types combined
+    let globalSummaryAllCount = 0;
+    let globalSummaryAllPph = 0;
+
+    const targetCategories = ["Tree", "Sapling", "Wilding"];
+
+    targetCategories.forEach((category) => {
+      const speciesRows = densityMap[category];
+      const sortedSpeciesKeys = Object.keys(speciesRows).sort();
+
+      if (sortedSpeciesKeys.length === 0) return;
+
+      let tableTotalCount = 0;
+      let tableTotalPph = 0;
+
+      const tableWrapper = document.createElement("div");
+      tableWrapper.className = "table-container mb-4 shadow-sm pb-1";
+
+      let iconMarkup =
+        category === "Tree"
+          ? '<i class="fa-solid fa-tree me-2 text-primary"></i>'
+          : category === "Sapling"
+            ? '<i class="fa-solid fa-baby-carriage me-2 text-info"></i>'
+            : '<i class="fa-solid fa-shuttle-space me-2 text-warning"></i>';
+
+      let innerHTMLMarkup = `
+        <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+            <h5 class="m-0 fw-bold text-dark">${iconMarkup}${category} Density Profile</h5>
+            <span class="badge bg-dark px-2 py-1">Normalization Base: /8</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-borderless align-middle m-0">
+                <thead class="table-light text-uppercase small text-secondary">
+                    <tr>
+                        <th class="ps-3">Species Botanical Classification Name</th>
+                        <th style="width: 260px;">Count <span class="text-muted font-monospace">(Total / 8)</span></th>
+                        <th style="width: 260px;">PPH <span class="text-muted font-monospace">(Count × 100)</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+      `;
+
+      sortedSpeciesKeys.forEach((speciesName) => {
+        const item = speciesRows[speciesName];
+
+        const calculatedCount = item.unitCount / 8;
+        const calculatedPph = calculatedCount * 100;
+
+        tableTotalCount += calculatedCount;
+        tableTotalPph += calculatedPph;
+
+        // Sum directly into global overview stats across all types
+        globalSummaryAllCount += calculatedCount;
+        globalSummaryAllPph += calculatedPph;
+
+        innerHTMLMarkup += `
+          <tr>
+            <td class="ps-3 fw-bold text-dark text-uppercase">${item.species}</td>
+            <td class="font-monospace fw-semibold text-success">${calculatedCount.toFixed(2)}</td>
+            <td class="font-monospace fw-semibold text-dark">${calculatedPph.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+
+      innerHTMLMarkup += `
+                <tr class="table-success fw-bold">
+                    <td class="ps-3 text-uppercase text-success">
+                        <i class="fa-solid fa-calculator me-2"></i>Total ${category} Density Summary
+                    </td>
+                    <td class="font-monospace text-success">${tableTotalCount.toFixed(2)}</td>
+                    <td class="font-monospace text-dark">${tableTotalPph.toFixed(2)}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+      `;
+
+      tableWrapper.innerHTML = innerHTMLMarkup;
+      densityWorkspace.appendChild(tableWrapper);
+    });
+
+    if (densityWorkspace.children.length === 0) {
+      densityWorkspace.innerHTML = `<div class="table-container text-center text-muted py-5">No survey records calculated inside cloud registers.</div>`;
+    }
+
+    // FIXED: Updates widgets to display global sums for Count and PPH instead of raw individuals/taxa
+    document.getElementById("widgetGlobalTotalCount").textContent =
+      globalSummaryAllCount.toFixed(2);
+    document.getElementById("widgetGlobalTotalPph").textContent =
+      globalSummaryAllPph.toFixed(2);
+  } catch (err) {
+    console.error("Density Engine initialization trace exception:", err);
+    densityWorkspace.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Error generating density matrices.</div>`;
+  }
+}
+// ==========================================================================
 // CENTRALIZED SPECIES CATALOG LOGIC SEED ENGINE
 // ==========================================================================
 /**
