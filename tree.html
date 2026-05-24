@@ -230,7 +230,7 @@
         const branchForm = document.getElementById("branchForm");
         populateSpeciesDropdown("species");
 
-        // Simple reset handler when modal triggers open
+        // Clear dynamic elements when opening creator modal panel box container wrapper
         document
           .getElementById("openMainModalBtn")
           .addEventListener("click", () => {
@@ -239,20 +239,20 @@
             previewBa.textContent = "—";
           });
 
-        // Live calculations tracking formulas preview
+        // Live calculation engine changes tracking previews loops execution
         gbhInput.addEventListener("input", function () {
           const gbhVal = parseFloat(this.value);
           if (!isNaN(gbhVal) && gbhVal > 0) {
             const metrics = calculateMetrics(gbhVal);
             previewDbh.textContent = `${metrics.dbh} cm`;
-            previewBa.textContent = `${metrics.basalArea} m²`;
+            previewBa.textContent = `${metrics.basalArea} cm²`; // FIXED: Standardized metrics label output units to cm²
           } else {
             previewDbh.textContent = "—";
             previewBa.textContent = "—";
           }
         });
 
-        // Form Submit Handler for adding parent trees
+        // Form Submit Handler for adding parent trees inside the database registry
         mangroveForm.addEventListener("submit", async function (e) {
           e.preventDefault();
           Swal.fire({
@@ -263,7 +263,9 @@
             },
           });
 
-          const species = document.getElementById("species").value;
+          const speciesIdSelected = parseInt(
+            document.getElementById("species").value,
+          ); // FIXED: Captures catalog reference integer ID
           const transectNum = parseInt(
             document.getElementById("transectNumber").value,
           );
@@ -276,7 +278,7 @@
               .from("mangrove_trees")
               .insert([
                 {
-                  species: species,
+                  species_id: speciesIdSelected, // FIXED: Passes relational reference foreign key column constraints parameter map
                   transect_number: transectNum,
                   plot_number: plotNum,
                 },
@@ -300,7 +302,6 @@
 
             if (stemError) throw stemError;
 
-            // Close using native Bootstrap JS select framework API routines
             bootstrap.Modal.getInstance(
               document.getElementById("mainTreeModal"),
             ).hide();
@@ -321,7 +322,7 @@
           }
         });
 
-        // Form Submit Handler for adding branches
+        // Form Submit Handler for adding nested branch stem measurements records rows
         branchForm.addEventListener("submit", async function (e) {
           e.preventDefault();
           Swal.fire({
@@ -377,7 +378,6 @@
         });
       });
 
-      // Actions router fallback handles modal setup values explicitly
       function triggerBranchModal(treeId) {
         document.getElementById("branchForm").reset();
         document.getElementById("targetTreeId").value = treeId;
@@ -415,6 +415,7 @@
         await fetchTreeCloudRecords();
       }
 
+      // Initialize dataset pipeline sync operations
       fetchTreeCloudRecords();
     </script>
   </body>
