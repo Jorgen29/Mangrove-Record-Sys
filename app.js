@@ -146,7 +146,6 @@ function renderTreeTable() {
 // ==========================================================================
 async function fetchRegenCloudRecords() {
   try {
-    // FIXED: Added mangrove_species_catalog relational link targeting join query logic pipelines
     const { data, error } = await _supabase
       .from("mangrove_regeneration")
       .select("*, mangrove_species_catalog(botanical_name, common_name)")
@@ -165,7 +164,7 @@ async function fetchRegenCloudRecords() {
 
       return {
         id: record.id,
-        species_id: record.species_id, // Expose ID properties for cross-component duplicate verification loops
+        species_id: record.species_id,
         species: dynamicLabel,
         transect: record.transect_number,
         plot: record.plot_number,
@@ -182,9 +181,57 @@ async function fetchRegenCloudRecords() {
       .filter((r) => r.type === "Wilding")
       .map(mapRelationalRecord);
 
-    renderRegenTables();
+    renderRegenTables(); // FIXED: Can now safely call this because it lives in the same file below!
   } catch (err) {
     console.error("Regeneration engine mapping pipeline failure:", err);
+  }
+}
+
+// FIXED: Moved from HTML script block into app.js to solve scope definition errors
+function renderRegenTables() {
+  const saplingBody = document.getElementById("saplingTableBody");
+  const wildingBody = document.getElementById("wildingTableBody");
+  const saplingCounter = document.getElementById("saplingCounter");
+  const wildingCounter = document.getElementById("wildingCounter");
+
+  if (saplingBody && saplingCounter) {
+    saplingCounter.textContent = `Total Rows: ${saplingRecords.length}`;
+    if (saplingRecords.length === 0) {
+      saplingBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4 fw-medium">No sapling records located.</td></tr>`;
+    } else {
+      saplingBody.innerHTML = "";
+      saplingRecords.forEach((record) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+                    <td class="ps-3 fw-bold text-dark"><span class="badge bg-dark me-2">T${record.transect} - P${record.plot}</span>${record.species}</td>
+                    <td><span class="badge-type badge-sapling"><i class="fa-solid fa-baby-carriage me-1"></i>Sapling</span></td>
+                    <td class="font-monospace fw-semibold">${record.count}</td>
+                    <td class="font-monospace fw-bold text-success">${record.basalArea}</td>
+                    <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="deleteRegenEntry(${record.id})"><i class="fa-solid fa-trash-can"></i></button></td>
+                `;
+        saplingBody.appendChild(row);
+      });
+    }
+  }
+
+  if (wildingBody && wildingCounter) {
+    wildingCounter.textContent = `Total Rows: ${wildingRecords.length}`;
+    if (wildingRecords.length === 0) {
+      wildingBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4 fw-medium">No wilding records located.</td></tr>`;
+    } else {
+      wildingBody.innerHTML = "";
+      wildingRecords.forEach((record) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+                    <td class="ps-3 fw-bold text-dark"><span class="badge bg-dark me-2">T${record.transect} - P${record.plot}</span>${record.species}</td>
+                    <td><span class="badge-type badge-wilding"><i class="fa-solid fa-shuttle-space me-1"></i>Wilding</span></td>
+                    <td class="font-monospace fw-semibold">${record.count}</td>
+                    <td class="font-monospace fw-bold text-success">${record.basalArea}</td>
+                    <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="deleteRegenEntry(${record.id})"><i class="fa-solid fa-trash-can"></i></button></td>
+                `;
+        wildingBody.appendChild(row);
+      });
+    }
   }
 }
 
