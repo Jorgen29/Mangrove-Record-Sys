@@ -1,0 +1,183 @@
+/* ==========================================================================
+   SHARED ECO-SYSTEM PALETTE VARIABLES
+   ========================================================================== */
+:root {
+  --bg-main: #f4f7f6;
+  --sidebar-bg: #1e293b;
+  --sidebar-hover: #334155;
+  --sidebar-active: #198754;
+  --text-dark: #2c3e50;
+  --text-muted: #64748b;
+  --panel-flat: #f8fafc;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-dark);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.font-monospace {
+  font-family: SFMono-Regular, Consolas, Monaco, monospace !important;
+}
+
+/* ==========================================================================
+   UNIFIED SIDEBAR ARCHITECTURE LAYOUT
+   ========================================================================== */
+#sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 260px;
+  background-color: var(--sidebar-bg);
+  color: #ffffff;
+  z-index: 1040;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+#sidebar .sidebar-header {
+  padding: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#sidebar .nav-link {
+  color: #cbd5e1;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  border-radius: 0px;
+  transition: all 0.15s ease;
+}
+
+#sidebar .nav-link:hover {
+  background-color: var(--sidebar-hover);
+  color: #ffffff;
+}
+
+#sidebar .nav-link.active {
+  background-color: var(--sidebar-active);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+#sidebar .nav-link i {
+  width: 24px;
+  font-size: 1.1rem;
+}
+
+/* Page Workspace Content Wrapper Frame */
+.page-workspace {
+  margin-left: 260px;
+  min-height: 100vh;
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-toggle-header {
+  display: none;
+  background-color: var(--sidebar-bg);
+  color: #ffffff;
+  padding: 12px 20px;
+}
+
+/* ==========================================================================
+   SHARED WORKING CANVAS WIDGETS AND GRID COMPONENT HOOKS
+   ========================================================================== */
+.table-container {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  padding: 24px;
+}
+
+.card-stat {
+  border: none !important;
+  border-radius: 8px;
+  background-color: var(--panel-flat);
+  padding: 20px;
+}
+
+/* Specific Badge State Rules */
+.badge-calc {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  font-weight: 600;
+}
+.badge-branch-calc {
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+}
+.badge-type {
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge-tree {
+  background-color: #f0fdf4;
+  color: #166534;
+}
+.badge-sapling {
+  background-color: #f0f9ff;
+  color: #0369a1;
+}
+.badge-wilding {
+  background-color: #fffbeb;
+  color: #92400e;
+}
+.sub-branch-row {
+  background-color: #fafafa;
+}
+.tree-group-header {
+  background-color: #f8fafc;
+  border-top: 2px solid #cbd5e1 !important;
+}
+
+/* ==========================================================================
+   RESPONSIVE COMPACT SCREEN BREAKPOINTS
+   ========================================================================== */
+@media (max-width: 991.98px) {
+  #sidebar {
+    transform: translateX(-100%);
+  }
+  #sidebar.show {
+    transform: translateX(0);
+  }
+  .page-workspace {
+    margin-left: 0 !important;
+  }
+  .mobile-toggle-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* Printing optimization targets layout clean overrides */
+@media print {
+  #sidebar,
+  .mobile-toggle-header,
+  .btn,
+  #openMainModalBtn,
+  #openRegenModalBtn {
+    display: none !important;
+  }
+  .page-workspace {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+}

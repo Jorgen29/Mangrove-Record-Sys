@@ -1,0 +1,115 @@
+<div class="modal fade" id="mainTreeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 12px">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="fa-solid fa-square-plus text-success me-2"></i>Record Main
+          Tree Base
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="mangroveForm">
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label for="transectNumber" class="form-label fw-bold"
+                >Transect Number</label
+              >
+              <input
+                type="number"
+                min="1"
+                step="1"
+                class="form-control"
+                id="transectNumber"
+                placeholder="e.g. 1"
+                required
+              />
+            </div>
+            <div class="col-6">
+              <label for="plotNumber" class="form-label fw-bold"
+                >Plot Number</label
+              >
+              <input
+                type="number"
+                min="1"
+                step="1"
+                class="form-control"
+                id="plotNumber"
+                placeholder="e.g. 1"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="species" class="form-label fw-bold"
+              >Mangrove Species</label
+            >
+            <select class="form-select" id="species" required>
+              <option value="" disabled selected hidden>
+                Select species...
+              </option>
+              <option value="Rhizophora mangle (Red Mangrove)">
+                Rhizophora mangle (Red Mangrove)
+              </option>
+              <option value="Avicennia germinans (Black Mangrove)">
+                Avicennia germinans (Black Mangrove)
+              </option>
+              <option value="Laguncularia racemosa (White Mangrove)">
+                Laguncularia racemosa (White Mangrove)
+              </option>
+              <option value="Sonneratia alba">Sonneratia alba</option>
+              <option value="Bruguiera gymnorhiza">Bruguiera gymnorhiza</option>
+              <option value="Other / Unknown">Other / Unknown</option>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label for="gbh" class="form-label fw-bold">Main Trunk GBH</label>
+            <div class="input-group">
+              <input
+                type="number"
+                step="0.01"
+                min="0.1"
+                class="form-control"
+                id="gbh"
+                placeholder="E.g., 29"
+                required
+              />
+              <span class="input-group-text">cm</span>
+            </div>
+            <div class="form-text text-muted">
+              Input the primary trunk reading here first. Extra stems can be
+              added later from the table grid ledger actions.
+            </div>
+          </div>
+
+          <hr class="text-muted my-3" />
+
+          <div class="bg-light p-3 rounded mb-4 border">
+            <h6 class="text-uppercase fw-bold text-muted small mb-3">
+              Instant Calculations
+            </h6>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="small text-secondary">Initial DBH:</span>
+              <span class="fw-bold text-dark" id="previewDbh">—</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span class="small text-secondary">Initial Basal Area:</span>
+              <span class="fw-bold text-success" id="previewBa">—</span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success w-100 py-2 fw-bold">
+            <i class="fa-solid fa-circle-check me-1"></i>Create Tree Record
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

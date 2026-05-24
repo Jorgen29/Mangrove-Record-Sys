@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mangrove Monitor - Species Catalog</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <div id="sidebar"></div>
+
+    <div class="page-workspace">
+      <div class="mobile-toggle-header">
+        <h5 class="m-0 fw-bold">
+          <i class="fa-solid fa-tags me-2"></i>Catalog Settings
+        </h5>
+        <button class="btn btn-sm btn-success" onclick="toggleMobileSidebar()">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+
+      <div class="p-4">
+        <div
+          class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2"
+        >
+          <h2 class="m-0 fw-bold text-dark">
+            <i class="fa-solid fa-sliders text-success me-2"></i>Dropdown
+            Configuration Dictionary
+          </h2>
+          <button
+            class="btn btn-success fw-bold px-4 shadow-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#speciesModal"
+          >
+            <i class="fa-solid fa-plus-circle me-1"></i>Add New Species Registry
+          </button>
+        </div>
+
+        <div class="table-container">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="m-0 fw-bold text-secondary">
+              Global Dropdown Seed Options
+            </h5>
+            <span class="badge bg-secondary p-2" id="catalogCounter"
+              >Total Entry Items: 0</span
+            >
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle border m-0">
+              <thead class="table-light text-uppercase small">
+                <tr>
+                  <th class="ps-3">Botanical Genus/Species</th>
+                  <th>Common Standard Name</th>
+                  <th class="text-center" style="width: 120px">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="catalogTableBody">
+                <tr>
+                  <td colspan="3" class="text-center py-4 text-muted">
+                    <i class="fa-solid fa-spin fa-circle-notch me-2"></i>Syncing
+                    species definitions...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="speciesModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-dark text-white">
+            <h5 class="modal-title fw-bold">
+              <i class="fa-solid fa-tags text-success me-2"></i>Register New
+              Catalog Item
+            </h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body p-4">
+            <form id="speciesForm">
+              <div class="mb-3">
+                <label for="botanicalName" class="form-label fw-bold"
+                  >Botanical Name (Scientific Name)</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="botanicalName"
+                  placeholder="e.g., Rhizophora mangle"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="commonName" class="form-label fw-bold"
+                  >Common Vernacular Name</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="commonName"
+                  placeholder="e.g., Red Mangrove"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-success w-100 py-2 fw-bold">
+                <i class="fa-solid fa-circle-check me-1"></i>Append to Dropdowns
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const speciesForm = document.getElementById("speciesForm");
+
+        speciesForm.addEventListener("submit", async function (e) {
+          e.preventDefault();
+          Swal.fire({
+            title: "Registering Species...",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
+
+          const bName = document.getElementById("botanicalName").value.trim();
+          const cName = document.getElementById("commonName").value.trim();
+
+          try {
+            const { error } = await _supabase
+              .from("mangrove_species_catalog")
+              .insert([{ botanical_name: bName, common_name: cName }]);
+
+            if (error) throw error;
+
+            bootstrap.Modal.getInstance(
+              document.getElementById("speciesModal"),
+            ).hide();
+            speciesForm.reset();
+            await fetchLocalCatalog();
+
+            Swal.fire({
+              title: "Dropdown Updated!",
+              text: `"${bName}" added as an global option choice choice.`,
+              icon: "success",
+              confirmButtonColor: "#198754",
+            });
+          } catch (err) {
+            Swal.fire({
+              title: "Validation Warning",
+              text: "This botanical classification might already exist.",
+              icon: "error",
+            });
+          }
+        });
+
+        fetchLocalCatalog();
+      });
+
+      async function fetchLocalCatalog() {
+        const body = document.getElementById("catalogTableBody");
+        const counter = document.getElementById("catalogCounter");
+
+        try {
+          const { data, error } = await _supabase
+            .from("mangrove_species_catalog")
+            .select("*")
+            .order("botanical_name", { ascending: true });
+
+          if (error) throw error;
+
+          counter.textContent = `Total Entry Items: ${data.length}`;
+          body.innerHTML = "";
+
+          data.forEach((item) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td class="ps-3 fw-bold text-dark font-monospace italic"><em>${item.botanical_name}</em></td>
+                <td class="text-secondary fw-semibold">${item.common_name || "—"}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCatalogItem(${item.id}, '${item.botanical_name}')">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </td>
+            `;
+            body.appendChild(row);
+          });
+        } catch (err) {
+          body.innerHTML = `<tr><td colspan="3" class="text-center text-danger">Failed to track schema parameters definitions.</td></tr>`;
+        }
+      }
+
+      async function deleteCatalogItem(id, name) {
+        const check = await Swal.fire({
+          title: "Remove Option?",
+          text: `Wiping "${name}" might affect active entries utilizing this selection field string value.`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#dc3545",
+        });
+        if (check.isConfirmed) {
+          await _supabase
+            .from("mangrove_species_catalog")
+            .delete()
+            .eq("id", id);
+          await fetchLocalCatalog();
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mangrove Monitor - Trees</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <div id="sidebar"></div>
+
+    <div class="page-workspace">
+      <div class="mobile-toggle-header">
+        <h5 class="m-0 fw-bold">
+          <i class="fa-solid fa-tree me-2"></i>Tree Inventory
+        </h5>
+        <button class="btn btn-sm btn-success" onclick="toggleMobileSidebar()">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+
+      <div class="p-4">
+        <div
+          class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2"
+        >
+          <h2 class="m-0 fw-bold text-success">
+            <i class="fa-solid fa-magnifying-glass-chart me-2 text-dark"></i
+            >Tree Inventory Analysis
+          </h2>
+          <button
+            class="btn btn-success fw-bold px-4 shadow-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#mainTreeModal"
+            id="openMainModalBtn"
+          >
+            <i class="fa-solid fa-plus-circle me-1"></i>Add New Tree
+          </button>
+        </div>
+
+        <div class="table-container">
+          <div
+            class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"
+          >
+            <h5 class="m-0 fw-bold text-secondary">Active Field Plots</h5>
+            <span class="badge bg-secondary p-2" id="recordCounter"
+              >Total Trees: 0</span
+            >
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle border m-0">
+              <thead class="table-light text-uppercase small">
+                <tr>
+                  <th class="ps-3">Tree Profile / Stem Component</th>
+                  <th style="width: 110px">
+                    GBH <span class="text-muted font-monospace">(cm)</span>
+                  </th>
+                  <th style="width: 160px">
+                    DBH <span class="text-muted font-monospace">(cm)</span>
+                  </th>
+                  <th style="width: 180px">
+                    Basal Area
+                    <span class="text-muted font-monospace">(cm²)</span>
+                  </th>
+                  <th class="text-center" style="width: 160px">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="datasetBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="mainTreeModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-dark text-white">
+            <h5 class="modal-title fw-bold">
+              <i class="fa-solid fa-square-plus text-success me-2"></i>Record
+              Main Tree Base
+            </h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body p-4">
+            <form id="mangroveForm">
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label for="transectNumber" class="form-label fw-bold"
+                    >Transect Number</label
+                  >
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="form-control"
+                    id="transectNumber"
+                    placeholder="e.g. 1"
+                    required
+                  />
+                </div>
+                <div class="col-6">
+                  <label for="plotNumber" class="form-label fw-bold"
+                    >Plot Number</label
+                  >
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="form-control"
+                    id="plotNumber"
+                    placeholder="e.g. 1"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="species" class="form-label fw-bold"
+                  >Mangrove Species</label
+                >
+                <select class="form-select" id="species" required>
+                  <option value="" disabled selected hidden>
+                    Select species...
+                  </option>
+                </select>
+              </div>
+              <div class="mb-4">
+                <label for="gbh" class="form-label fw-bold"
+                  >Main Trunk GBH</label
+                >
+                <div class="input-group">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.1"
+                    class="form-control"
+                    id="gbh"
+                    placeholder="E.g., 29"
+                    required
+                  />
+                  <span class="input-group-text">cm</span>
+                </div>
+              </div>
+              <div class="bg-light p-3 rounded mb-4 border">
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="small text-secondary">Initial DBH:</span>
+                  <span class="fw-bold text-dark" id="previewDbh">—</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="small text-secondary">Initial Basal Area:</span>
+                  <span class="fw-bold text-success" id="previewBa">—</span>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-success w-100 py-2 fw-bold">
+                <i class="fa-solid fa-circle-check me-1"></i>Create Tree Record
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="branchModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-dark text-white">
+            <h5 class="modal-title fw-bold">
+              <i class="fa-solid fa-code-branch text-success me-2"></i>Add
+              Branch Stem
+            </h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body p-4">
+            <form id="branchForm">
+              <input type="hidden" id="targetTreeId" />
+              <div class="mb-3">
+                <label for="branchGbh" class="form-label fw-bold"
+                  >Branch GBH Value</label
+                >
+                <div class="input-group">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.1"
+                    class="form-control"
+                    id="branchGbh"
+                    placeholder="E.g., 28"
+                    required
+                  />
+                  <span class="input-group-text">cm</span>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-success w-100 fw-bold mt-2">
+                Append Stem Element
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const mangroveForm = document.getElementById("mangroveForm");
+        const previewDbh = document.getElementById("previewDbh");
+        const previewBa = document.getElementById("previewBa");
+        const gbhInput = document.getElementById("gbh");
+        const branchForm = document.getElementById("branchForm");
+        populateSpeciesDropdown("species");
+
+        // Simple reset handler when modal triggers open
+        document
+          .getElementById("openMainModalBtn")
+          .addEventListener("click", () => {
+            mangroveForm.reset();
+            previewDbh.textContent = "—";
+            previewBa.textContent = "—";
+          });
+
+        // Live calculations tracking formulas preview
+        gbhInput.addEventListener("input", function () {
+          const gbhVal = parseFloat(this.value);
+          if (!isNaN(gbhVal) && gbhVal > 0) {
+            const metrics = calculateMetrics(gbhVal);
+            previewDbh.textContent = `${metrics.dbh} cm`;
+            previewBa.textContent = `${metrics.basalArea} m²`;
+          } else {
+            previewDbh.textContent = "—";
+            previewBa.textContent = "—";
+          }
+        });
+
+        // Form Submit Handler for adding parent trees
+        mangroveForm.addEventListener("submit", async function (e) {
+          e.preventDefault();
+          Swal.fire({
+            title: "Storing Tree...",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
+
+          const species = document.getElementById("species").value;
+          const transectNum = parseInt(
+            document.getElementById("transectNumber").value,
+          );
+          const plotNum = parseInt(document.getElementById("plotNumber").value);
+          const initialGbh = parseFloat(gbhInput.value);
+          const initialMetrics = calculateMetrics(initialGbh);
+
+          try {
+            const { data: newTree, error: treeError } = await _supabase
+              .from("mangrove_trees")
+              .insert([
+                {
+                  species: species,
+                  transect_number: transectNum,
+                  plot_number: plotNum,
+                },
+              ])
+              .select()
+              .single();
+
+            if (treeError) throw treeError;
+
+            const { error: stemError } = await _supabase
+              .from("mangrove_stems")
+              .insert([
+                {
+                  tree_id: newTree.id,
+                  label: "Main Trunk (Stem 1)",
+                  gbh: initialGbh,
+                  dbh: parseFloat(initialMetrics.dbh),
+                  basal_area: parseFloat(initialMetrics.basalArea),
+                },
+              ]);
+
+            if (stemError) throw stemError;
+
+            // Close using native Bootstrap JS select framework API routines
+            bootstrap.Modal.getInstance(
+              document.getElementById("mainTreeModal"),
+            ).hide();
+            await fetchTreeCloudRecords();
+
+            Swal.fire({
+              title: "Tree Profile Stored!",
+              text: `Transect ${transectNum} Plot ${plotNum} saved cleanly.`,
+              icon: "success",
+              confirmButtonColor: "#198754",
+            });
+          } catch (err) {
+            Swal.fire({
+              title: "Database Error",
+              text: err.message,
+              icon: "error",
+            });
+          }
+        });
+
+        // Form Submit Handler for adding branches
+        branchForm.addEventListener("submit", async function (e) {
+          e.preventDefault();
+          Swal.fire({
+            title: "Appending Branch...",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
+
+          const treeId = parseInt(
+            document.getElementById("targetTreeId").value,
+          );
+          const newBranchGbh = parseFloat(
+            document.getElementById("branchGbh").value,
+          );
+          const branchMetrics = calculateMetrics(newBranchGbh);
+
+          const targetTree = mangroveRecords.find((t) => t.id === treeId);
+          if (!targetTree) return;
+
+          try {
+            const { error } = await _supabase.from("mangrove_stems").insert([
+              {
+                tree_id: treeId,
+                label: `Branch Stem ${targetTree.stems.length + 1}`,
+                gbh: newBranchGbh,
+                dbh: parseFloat(branchMetrics.dbh),
+                basal_area: parseFloat(branchMetrics.basalArea),
+              },
+            ]);
+
+            if (error) throw error;
+
+            bootstrap.Modal.getInstance(
+              document.getElementById("branchModal"),
+            ).hide();
+            await fetchTreeCloudRecords();
+
+            Swal.fire({
+              title: "Branch Appended!",
+              text: `Stem element metrics recalculations processed instantly.`,
+              icon: "success",
+              confirmButtonColor: "#198754",
+            });
+          } catch (err) {
+            Swal.fire({
+              title: "Database Error",
+              text: err.message,
+              icon: "error",
+            });
+          }
+        });
+      });
+
+      // Actions router fallback handles modal setup values explicitly
+      function triggerBranchModal(treeId) {
+        document.getElementById("branchForm").reset();
+        document.getElementById("targetTreeId").value = treeId;
+        const myModal = new bootstrap.Modal(
+          document.getElementById("branchModal"),
+        );
+        myModal.show();
+      }
+
+      async function deleteTree(id) {
+        const res = await Swal.fire({
+          title: "Delete Tree?",
+          text: "Wiping this tree removes all its stems!",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#dc3545",
+        });
+        if (res.isConfirmed) {
+          await _supabase.from("mangrove_trees").delete().eq("id", id);
+          await fetchTreeCloudRecords();
+        }
+      }
+
+      async function deleteStem(treeId, stemId) {
+        const targetTree = mangroveRecords.find((t) => t.id === treeId);
+        if (targetTree && targetTree.stems.length <= 1) {
+          Swal.fire({
+            title: "Blocked",
+            text: "Must maintain at least 1 stem base.",
+            icon: "info",
+          });
+          return;
+        }
+        await _supabase.from("mangrove_stems").delete().eq("id", stemId);
+        await fetchTreeCloudRecords();
+      }
+
+      fetchTreeCloudRecords();
+    </script>
+  </body>
+</html>
