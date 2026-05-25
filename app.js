@@ -1469,6 +1469,122 @@ function exportDiversityToExcel() {
     alert("An error occurred while compiling your spreadsheet.");
   }
 }
+
+// ==========================================================================
+// PROJECT COMPONENT 12: IMPORTANCE VALUE INDEX EXCEL EXPORT UTILITY
+// ==========================================================================
+function exportIviToExcel() {
+  try {
+    if (typeof XLSX === "undefined") {
+      alert(
+        "Spreadsheet library is initializing. Please wait 3 seconds and try again.",
+      );
+      return;
+    }
+
+    const tableElement = document
+      .querySelector("#iviTableBody")
+      .closest("table");
+
+    if (!tableElement) {
+      alert("No data grid found to parse into Excel.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.table_to_sheet(tableElement, { raw: true });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Importance Value Standings",
+    );
+    XLSX.writeFile(
+      workbook,
+      `Importance_Value_Index_Report_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  } catch (error) {
+    console.error("Excel Export Error:", error);
+    alert("An error occurred while compiling your spreadsheet.");
+  }
+}
+
+// ==========================================================================
+// PROJECT COMPONENT 13: SPECIES FREQUENCY EXCEL EXPORT UTILITY
+// ==========================================================================
+function exportFrequencyToExcel() {
+  try {
+    if (typeof XLSX === "undefined") {
+      alert(
+        "Spreadsheet library is initializing. Please wait 3 seconds and try again.",
+      );
+      return;
+    }
+
+    const tableElement = document
+      .querySelector("#frequencyTableBody")
+      .closest("table");
+
+    if (!tableElement) {
+      alert("No data grid found to parse into Excel.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.table_to_sheet(tableElement, { raw: true });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Spatial Frequency Index",
+    );
+    XLSX.writeFile(
+      workbook,
+      `Species_Frequency_Distribution_Report_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  } catch (error) {
+    console.error("Excel Export Error:", error);
+    alert("An error occurred while compiling your spreadsheet.");
+  }
+}
+
+// ==========================================================================
+// PROJECT COMPONENT 14: PLANT DENSITY EXCEL EXPORT UTILITY
+// ==========================================================================
+function exportDensityToExcel() {
+  try {
+    if (typeof XLSX === "undefined") {
+      alert(
+        "Spreadsheet library is initializing. Please wait 3 seconds and try again.",
+      );
+      return;
+    }
+
+    // Target the table element inside the density engine workspace wrapper
+    const tableElement = document.querySelector("#densityWorkspace table");
+
+    if (!tableElement) {
+      alert("No data grid found to parse into Excel.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.table_to_sheet(tableElement, { raw: true });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Plant Density Distribution",
+    );
+    XLSX.writeFile(
+      workbook,
+      `Plant_Density_Matrix_Report_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  } catch (error) {
+    console.error("Excel Export Error:", error);
+    alert("An error occurred while compiling your spreadsheet.");
+  }
+}
 // ==========================================================================
 // CENTRALIZED SPECIES CATALOG LOGIC SEED ENGINE
 // ==========================================================================
