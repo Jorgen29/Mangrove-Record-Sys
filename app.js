@@ -1226,6 +1226,164 @@ async function generateDiversityIndexReport() {
 }
 
 // ==========================================================================
+// PROJECT COMPONENT 9: CARBON STOCK ESTIMATION ENGINE (carbon.html)
+// ==========================================================================
+async function generateCarbonStockReport() {
+  const carbonWorkspace = document.getElementById("carbonWorkspace");
+  if (!carbonWorkspace) return;
+
+  try {
+    const { data, error } = await _supabase
+      .from("mangrove_trees")
+      .select(
+        "transect_number, plot_number, mangrove_species_catalog(botanical_name, common_name), mangrove_stems(gbh)",
+      );
+
+    if (error) throw error;
+
+    let structuredPlotsMap = {};
+
+    const parseName = (catalog) => {
+      if (!catalog) return "Unassigned Species";
+      return catalog.common_name && catalog.common_name !== "Unclassified"
+        ? `${catalog.botanical_name} (${catalog.common_name})`
+        : catalog.botanical_name;
+    };
+
+    data.forEach((tree) => {
+      const tNum = tree.transect_number || 1;
+      const pNum = tree.plot_number || 1;
+      const locKey = `Transect ${tNum} — Plot ${pNum}`;
+      const resolvedName = parseName(tree.mangrove_species_catalog);
+
+      if (!structuredPlotsMap[locKey]) structuredPlotsMap[locKey] = {};
+      if (!structuredPlotsMap[locKey][resolvedName]) {
+        structuredPlotsMap[locKey][resolvedName] = {
+          species: resolvedName,
+          stemsGbhArray: [],
+        };
+      }
+
+      if (tree.mangrove_stems) {
+        tree.mangrove_stems.forEach((stem) => {
+          if (stem.gbh) {
+            structuredPlotsMap[locKey][resolvedName].stemsGbhArray.push(
+              parseFloat(stem.gbh),
+            );
+          }
+        });
+      }
+    });
+
+    carbonWorkspace.innerHTML = "";
+    const sortedLocations = Object.keys(structuredPlotsMap).sort((a, b) => {
+      return a.localeCompare(b, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+    });
+
+    if (sortedLocations.length === 0) {
+      carbonWorkspace.innerHTML = `<div class="table-container text-center text-muted py-5">No tree stems mapped in cloud registers to compute biomass pools.</div>`;
+      return;
+    }
+
+    let dynamicGlobalTotalCarbon = 0;
+
+    sortedLocations.forEach((locationTitle) => {
+      const plotDataRows = structuredPlotsMap[locationTitle];
+      const sortedSpeciesKeys = Object.keys(plotDataRows).sort();
+
+      let plotSumTotalC = 0;
+
+      const tableWrapper = document.createElement("div");
+      tableWrapper.className = "table-container mb-5 shadow-sm pb-1";
+
+      let innerHTMLMarkup = `
+        <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+            <h5 class="m-0 fw-bold text-success"><i class="fa-solid fa-leaf me-2 text-dark"></i>${locationTitle} Biomass Ledger</h5>
+            <span class="badge bg-dark px-2 py-1 small">Carbon Pool Estimation</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-borderless align-middle m-0 text-center small">
+                <thead class="table-light text-uppercase small text-secondary">
+                    <tr class="border-bottom">
+                        <th class="ps-3 text-start" style="min-width: 160px;">Species Botanical Name</th>
+                        <th class="text-primary" style="width: 80px;">GBH<br><small>(cm)</small></th>
+                        <th class="text-primary" style="width: 80px;">DBH<br><small>(cm)</small></th>
+                        <th class="text-primary" style="width: 90px;">AGB<br><small>(kg)</small></th>
+                        <th class="text-primary" style="width: 100px;">AGB<br><small>(t/ha)</small></th>
+                        <th class="text-info" style="width: 90px;">BGB<br><small>(kg)</small></th>
+                        <th class="text-info" style="width: 100px;">BGB<br><small>(t/ha)</small></th>
+                        <th class="text-warning" style="width: 100px;">C-AGB<br><small>(tC/ha)</small></th>
+                        <th class="text-warning" style="width: 100px;">C-BGB<br><small>(tC/ha)</small></th>
+                        <th class="text-success border-start" style="width: 110px;">Total C<br><small>(tC/ha)</small></th>
+                    </tr>
+                </thead>
+                <tbody>
+      `;
+
+      sortedSpeciesKeys.forEach((speciesName) => {
+        const item = plotDataRows[speciesName];
+
+        item.stemsGbhArray.forEach((gbhValue) => {
+          const dbh = gbhValue / Math.PI;
+
+          // 1. Raw weights in kg
+          const agbKg = 0.251 * 0.751 * Math.pow(dbh, 2.46);
+          const bgbKg = 0.1998 * Math.pow(0.752, 0.899) * Math.pow(dbh, 2.22);
+
+          // 2. FIXED: Applied your explicit scaling conversion equations to t/ha
+          const agbTha = ((agbKg / 100) * 10000) / 1000;
+          const bgbTha = ((bgbKg / 100) * 10000) / 1000;
+
+          // 3. Carbon pool containment allocations
+          const cAgb = agbTha * 0.47;
+          const cBgb = bgbTha * 0.38;
+          const totalC = cAgb + cBgb;
+
+          plotSumTotalC += totalC;
+          dynamicGlobalTotalCarbon += totalC;
+
+          innerHTMLMarkup += `
+            <tr class="border-bottom-subtle">
+              <td class="ps-3 fw-bold text-dark text-start text-uppercase">${speciesName}</td>
+              <td class="font-monospace text-secondary fw-semibold">${gbhValue.toFixed(2)}</td>
+              <td class="font-monospace text-secondary fw-semibold">${dbh.toFixed(2)}</td>
+              <td class="font-monospace text-secondary fw-semibold">${agbKg.toFixed(2)}</td>
+              <td class="font-monospace text-secondary fw-semibold fw-bold text-dark">${agbTha.toFixed(4)}</td>
+              <td class="font-monospace text-secondary fw-semibold">${bgbKg.toFixed(2)}</td>
+              <td class="font-monospace text-secondary fw-semibold fw-bold text-dark">${bgbTha.toFixed(4)}</td>
+              <td class="font-monospace text-secondary fw-semibold">${cAgb.toFixed(4)}</td>
+              <td class="font-monospace text-secondary fw-semibold">${cBgb.toFixed(4)}</td>
+              <td class="font-monospace text-secondary fw-semibold border-start fw-bold">${totalC.toFixed(4)}</td>
+            </tr>
+          `;
+        });
+      });
+
+      innerHTMLMarkup += `
+                <tr class="fw-bold text-dark border-top border-dark border-2">
+                    <td colspan="9" class="ps-3 text-uppercase text-dark text-start">Plot Sequestration Total Summary</td>
+                    <td class="font-monospace text-secondary border-start fs-6">${plotSumTotalC.toFixed(4)}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+      `;
+
+      tableWrapper.innerHTML = innerHTMLMarkup;
+      carbonWorkspace.appendChild(tableWrapper);
+    });
+
+    document.getElementById("widgetGlobalCarbonSum").textContent =
+      dynamicGlobalTotalCarbon.toFixed(4);
+  } catch (err) {
+    console.error("Carbon Engine system calculations error exception:", err);
+  }
+}
+
+// ==========================================================================
 // CENTRALIZED SPECIES CATALOG LOGIC SEED ENGINE
 // ==========================================================================
 /**
