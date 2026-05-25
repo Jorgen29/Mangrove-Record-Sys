@@ -1328,16 +1328,12 @@ async function generateCarbonStockReport() {
 
         item.stemsGbhArray.forEach((gbhValue) => {
           const dbh = gbhValue / Math.PI;
-
-          // 1. Raw weights in kg
           const agbKg = 0.251 * 0.751 * Math.pow(dbh, 2.46);
           const bgbKg = 0.1998 * Math.pow(0.752, 0.899) * Math.pow(dbh, 2.22);
 
-          // 2. FIXED: Applied your explicit scaling conversion equations to t/ha
           const agbTha = ((agbKg / 100) * 10000) / 1000;
           const bgbTha = ((bgbKg / 100) * 10000) / 1000;
 
-          // 3. Carbon pool containment allocations
           const cAgb = agbTha * 0.47;
           const cBgb = bgbTha * 0.38;
           const totalC = cAgb + cBgb;
@@ -1376,10 +1372,62 @@ async function generateCarbonStockReport() {
       carbonWorkspace.appendChild(tableWrapper);
     });
 
-    document.getElementById("widgetGlobalCarbonSum").textContent =
-      dynamicGlobalTotalCarbon.toFixed(4);
+    const globalWidget = document.getElementById("widgetGlobalCarbonSum");
+    if (globalWidget) {
+      globalWidget.textContent = dynamicGlobalTotalCarbon.toFixed(4);
+    }
   } catch (err) {
-    console.error("Carbon Engine system calculations error exception:", err);
+    console.error("Carbon Engine failure:", err);
+  }
+}
+
+// ==========================================================================
+// PROJECT COMPONENT 10: CLIENT-SIDE EXPORT UTILITIES (EXCEL)
+// ==========================================================================
+function exportCarbonToExcel() {
+  try {
+    if (typeof XLSX === "undefined") {
+      alert(
+        "Spreadsheet library is still buffering. Please wait 3 seconds and try again.",
+      );
+      return;
+    }
+
+    const workspace = document.getElementById("carbonWorkspace");
+    const tables = workspace.getElementsByTagName("table");
+
+    if (tables.length === 0) {
+      alert("No data grids found to parse into Excel.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    for (let i = 0; i < tables.length; i++) {
+      const tableElement = tables[i];
+      let sheetName = `Plot ${i + 1}`;
+      const parentContainer = tableElement.closest(".table-container");
+
+      if (parentContainer) {
+        const headerText = parentContainer.querySelector("h5")?.innerText || "";
+        if (headerText) {
+          sheetName = headerText
+            .replace(/Biomass Ledger/gi, "")
+            .trim()
+            .substring(0, 31);
+        }
+      }
+
+      const worksheet = XLSX.utils.table_to_sheet(tableElement, { raw: true });
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    }
+
+    XLSX.writeFile(
+      workbook,
+      `Carbon_Stock_Report_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  } catch (error) {
+    console.error("Excel Export Error:", error);
   }
 }
 

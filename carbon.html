@@ -13,14 +13,55 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
     />
     <link rel="stylesheet" href="style.css" />
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
     <style>
-      /* Clean helper rule override to strip remaining outer wrapper line accents */
       .table-container {
         border: none !important;
       }
       .border-bottom-subtle {
         border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+      }
+
+      /* UPDATED PRINT MEDIA FORMATTING SPECIFICATIONS FOR THE WIDE TABLE */
+      @media print {
+        @page {
+          size: landscape; /* FORCE PDF GENERATION INTO WIDE LANDSCAPE MODE */
+          margin: 0.5in; /* Set standard safe margins */
+        }
+        body {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          font-size: 11px !important; /* Scale down base text size slightly to prevent wrapping */
+        }
+        #sidebar,
+        .mobile-toggle-header,
+        .action-btn-group,
+        .badge {
+          display: none !important; /* Hide interface clutter */
+        }
+        .page-workspace {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 100% !important;
+        }
+        .table-container {
+          box-shadow: none !important;
+          page-break-inside: avoid; /* Prevent tables splitting awkwardly mid-row */
+          margin-bottom: 30px !important;
+          width: 100% !important;
+        }
+        table {
+          width: 100% !important;
+          table-layout: auto !important; /* Allow columns to auto-distribute space */
+        }
+        th,
+        td {
+          padding: 4px 6px !important; /* Tighten internal cell gaps for printing */
+        }
       }
     </style>
   </head>
@@ -52,12 +93,21 @@
               specific site plots.</small
             >
           </div>
-          <button
-            class="btn btn-outline-success fw-bold px-3"
-            onclick="window.print()"
-          >
-            <i class="fa-solid fa-print me-1"></i>Print Carbon Sheet
-          </button>
+
+          <div class="action-btn-group d-flex gap-2">
+            <button
+              class="btn btn-outline-primary fw-bold px-3"
+              onclick="exportCarbonToExcel()"
+            >
+              <i class="fa-solid fa-file-excel me-1"></i>Download Excel
+            </button>
+            <button
+              class="btn btn-outline-success fw-bold px-3"
+              onclick="window.print()"
+            >
+              <i class="fa-solid fa-file-pdf me-1"></i>Download PDF
+            </button>
+          </div>
         </div>
 
         <div class="row g-3 mb-4">
@@ -101,9 +151,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=13point0"></script>
+
+    <script src="app.js?v=14point2"></script>
     <script>
-      // Automatically execute allometric estimation loops on application mount
       generateCarbonStockReport();
     </script>
   </body>
