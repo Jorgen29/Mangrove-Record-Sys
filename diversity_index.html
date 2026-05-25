@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mangrove Monitor - Plant Density Matrix</title>
+    <title>Mangrove Monitor - Diversity Index</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -26,22 +26,22 @@
         border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
       }
 
-      /* PRINT MEDIA OVERRIDES: CUSTOM CONFIGURED FOR WIDE MATRIX LANDSCAPE PDF GENERATION */
+      /* PRINT MEDIA FORMATTING OVERRIDES FOR STARK VECTOR PDFs */
       @media print {
         @page {
-          size: landscape; /* FORCE PDF PAGE TEMPLATE HORIZONTAL OVERRIDE */
+          size: letter portrait;
           margin: 0.5in;
         }
         body {
           background-color: #ffffff !important;
           color: #000000 !important;
-          font-size: 11px !important; /* Scale down slightly for ultra-wide matrix distribution */
+          font-size: 12px !important;
         }
         #sidebar,
         .mobile-toggle-header,
         .action-btn-group,
         .badge {
-          display: none !important; /* Strip UI dashboard elements */
+          display: none !important; /* Hide interface clutter */
         }
         .page-workspace {
           margin: 0 !important;
@@ -55,11 +55,6 @@
         }
         table {
           width: 100% !important;
-          table-layout: auto !important;
-        }
-        th,
-        td {
-          padding: 4px 6px !important; /* Tighten cells spacing for landscape print flow */
         }
       }
     </style>
@@ -70,7 +65,7 @@
     <div class="page-workspace">
       <div class="mobile-toggle-header">
         <h5 class="m-0 fw-bold">
-          <i class="fa-solid fa-arrow-up-1-9 me-2"></i>Plant Density
+          <i class="fa-solid fa-layer-group me-2"></i>Diversity
         </h5>
         <button class="btn btn-sm btn-success" onclick="toggleMobileSidebar()">
           <i class="fa-solid fa-bars"></i>
@@ -83,19 +78,20 @@
         >
           <div>
             <h2 class="m-0 fw-bold text-dark">
-              <i class="fa-solid fa-arrow-up-1-9 text-success me-2"></i
-              >Consolidated Stand Density Layout
+              <i class="fa-solid fa-layer-group text-success me-2"></i
+              >Shannon-Weiner Diversity Index
             </h2>
             <small class="text-muted"
-              >Unified population profiling matrix tracking normalized count
-              summaries and relative plants-per-hectare metrics globally.</small
+              >Mathematical species richness model assessing population evenness
+              based on scaling relative plants per hectare distribution density
+              metrics.</small
             >
           </div>
 
           <div class="action-btn-group d-flex gap-2">
             <button
               class="btn btn-outline-primary fw-bold px-3"
-              onclick="exportDensityToExcel()"
+              onclick="exportDiversityToExcel()"
             >
               <i class="fa-solid fa-file-excel me-1"></i>Download Excel
             </button>
@@ -115,52 +111,78 @@
                 <div>
                   <span
                     class="text-uppercase text-muted small fw-bold d-block mb-1"
-                    >Global Summary Calculated Count (All Rows Sum)</span
+                    >Calculated Biodiversity Index (Shannon H')</span
                   >
                   <h2
                     class="m-0 fw-bold text-success font-monospace"
-                    id="widgetGlobalTotalCount"
+                    id="widgetShannonIndex"
                   >
-                    0.00
+                    0.0000
                   </h2>
                 </div>
-                <i
-                  class="fa-solid fa-calculator fs-2 text-success opacity-25"
-                ></i>
+                <i class="fa-solid fa-bug fs-2 text-success opacity-25"></i>
               </div>
             </div>
           </div>
-
           <div class="col-md-6">
             <div class="card-stat rounded shadow-sm border-0 bg-white">
               <div class="d-flex align-items-center justify-content-between">
                 <div>
                   <span
                     class="text-uppercase text-muted small fw-bold d-block mb-1"
-                    >Global Summary PPH (All Rows Sum)</span
+                    >Total Species Richness Count</span
                   >
                   <h2
                     class="m-0 fw-bold text-dark font-monospace"
-                    id="widgetGlobalTotalPph"
+                    id="widgetTaxaRichness"
                   >
-                    0.00
+                    0
                   </h2>
                 </div>
-                <i
-                  class="fa-solid fa-arrow-up-right-dots fs-2 text-dark opacity-25"
-                ></i>
+                <i class="fa-solid fa-dna fs-2 text-dark opacity-25"></i>
               </div>
             </div>
           </div>
         </div>
 
-        <div id="densityWorkspace">
-          <div class="table-container text-center text-muted py-5 shadow-sm">
-            <i
-              class="fa-solid fa-spin fa-circle-notch fs-4 text-success mb-2 d-block"
-            ></i>
-            Compiling population census grid matrix... Processing row
-            configurations...
+        <div class="table-container shadow-sm pb-1">
+          <div
+            class="d-flex justify-content-between align-items-center mb-3 px-2"
+          >
+            <h5 class="m-0 fw-bold text-secondary">
+              Biodiversity Index Synthesis Matrix
+            </h5>
+            <span class="badge bg-dark px-2 py-1">Shannon Model</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-borderless align-middle m-0 text-center">
+              <thead class="table-light text-uppercase small text-secondary">
+                <tr class="border-bottom">
+                  <th class="ps-3 text-start">Species Botanical Name</th>
+                  <th class="text-primary" style="width: 180px">
+                    PPH <small>(Row Sum)</small>
+                  </th>
+                  <th class="text-info" style="width: 180px">
+                    Pi <small>(PPH / Total)</small>
+                  </th>
+                  <th class="text-warning" style="width: 180px">ln(Pi)</th>
+                  <th class="text-success" style="width: 180px">
+                    H' <small>(Pi × lnPi)</small>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="diversityTableBody">
+                <tr>
+                  <td colspan="5" class="text-center py-5 text-muted">
+                    <i
+                      class="fa-solid fa-spin fa-circle-notch me-2 text-success"
+                    ></i>
+                    Compiling community matrices... Processing logarithmic
+                    variables...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -168,10 +190,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script src="app.js?v=14point6"></script>
+    <script src="app.js?v=14point3"></script>
     <script>
-      // Execute multi-table dynamic density calculation sequences
-      generatePlantDensityReport();
+      generateDiversityIndexReport();
     </script>
   </body>
 </html>
