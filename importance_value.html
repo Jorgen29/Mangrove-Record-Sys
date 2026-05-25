@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mangrove Monitor - Plant Density Matrix</title>
+    <title>Mangrove Monitor - Importance Value Index</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -30,7 +30,7 @@
     <div class="page-workspace">
       <div class="mobile-toggle-header">
         <h5 class="m-0 fw-bold">
-          <i class="fa-solid fa-arrow-up-1-9 me-2"></i>Plant Density
+          <i class="fa-solid fa-ranking-star me-2"></i>IVI Report
         </h5>
         <button class="btn btn-sm btn-success" onclick="toggleMobileSidebar()">
           <i class="fa-solid fa-bars"></i>
@@ -43,19 +43,19 @@
         >
           <div>
             <h2 class="m-0 fw-bold text-dark">
-              <i class="fa-solid fa-arrow-up-1-9 text-success me-2"></i
-              >Consolidated Stand Density Layout
+              <i class="fa-solid fa-ranking-star text-success me-2"></i
+              >Importance Value Index (IVI)
             </h2>
             <small class="text-muted"
-              >Unified population profiling matrix tracking normalized count
-              summaries and relative plants-per-hectare metrics globally.</small
+              >Comprehensive ecological ranking model combining relative values
+              of dominance, frequency, and stand density descriptors.</small
             >
           </div>
           <button
             class="btn btn-outline-success fw-bold px-3"
             onclick="window.print()"
           >
-            <i class="fa-solid fa-print me-1"></i>Print Census Matrix
+            <i class="fa-solid fa-print me-1"></i>Print Index Sheet
           </button>
         </div>
 
@@ -66,62 +66,91 @@
                 <div>
                   <span
                     class="text-uppercase text-muted small fw-bold d-block mb-1"
-                    >Global Summary Calculated Count (All Rows Sum)</span
+                    >Highest Logged IVI Value Score</span
                   >
                   <h2
                     class="m-0 fw-bold text-success font-monospace"
-                    id="widgetGlobalTotalCount"
+                    id="widgetMaxIviScore"
                   >
                     0.00
                   </h2>
                 </div>
-                <i
-                  class="fa-solid fa-calculator fs-2 text-success opacity-25"
-                ></i>
+                <i class="fa-solid fa-award fs-2 text-success opacity-25"></i>
               </div>
             </div>
           </div>
-
           <div class="col-md-6">
             <div class="card-stat rounded shadow-sm border-0 bg-white">
               <div class="d-flex align-items-center justify-content-between">
                 <div>
                   <span
                     class="text-uppercase text-muted small fw-bold d-block mb-1"
-                    >Global Summary PPH (All Rows Sum)</span
+                    >Ecologically Dominant Taxa Group</span
                   >
                   <h2
-                    class="m-0 fw-bold text-dark font-monospace"
-                    id="widgetGlobalTotalPph"
+                    class="m-0 fw-bold text-dark text-truncate fs-4 mt-1"
+                    id="widgetDominantTaxa"
+                    style="max-width: 320px"
                   >
-                    0.00
+                    Locating...
                   </h2>
                 </div>
-                <i
-                  class="fa-solid fa-arrow-up-right-dots fs-2 text-dark opacity-25"
-                ></i>
+                <i class="fa-solid fa-crown fs-2 text-dark opacity-25"></i>
               </div>
             </div>
           </div>
         </div>
 
-        <div id="densityWorkspace">
-          <div class="table-container text-center text-muted py-5 shadow-sm">
-            <i
-              class="fa-solid fa-spin fa-circle-notch fs-4 text-success mb-2 d-block"
-            ></i>
-            Compiling population census grid matrix... Processing row
-            configurations...
+        <div class="table-container shadow-sm pb-1">
+          <div
+            class="d-flex justify-content-between align-items-center mb-3 px-2"
+          >
+            <h5 class="m-0 fw-bold text-secondary">
+              Taxonomic Importance Synthesis Matrix
+            </h5>
+            <span class="badge bg-dark px-2 py-1">IVI Standings</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-borderless align-middle m-0 text-center">
+              <thead class="table-light text-uppercase small text-secondary">
+                <tr class="border-bottom">
+                  <th class="ps-3 text-start">Species Botanical Name</th>
+                  <th class="text-primary" style="width: 180px">
+                    R. Dom <small>(%)</small>
+                  </th>
+                  <th class="text-info" style="width: 180px">
+                    Rel. Freq <small>(%)</small>
+                  </th>
+                  <th class="text-warning" style="width: 180px">
+                    Rel. Den <small>(%)</small>
+                  </th>
+                  <th class="text-success" style="width: 180px">
+                    IVI Value <small>(Sum)</small>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="iviTableBody">
+                <tr>
+                  <td colspan="5" class="text-center py-5 text-muted">
+                    <i
+                      class="fa-solid fa-spin fa-circle-notch me-2 text-success"
+                    ></i>
+                    Fusing composite data nodes... Normalizing relative
+                    parameter indices...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=9point8"></script>
+    <script src="app.js?v=11point0"></script>
     <script>
-      // Execute multi-table dynamic density calculation sequences
-      generatePlantDensityReport();
+      // Automatically generate the comprehensive IVI analysis report matrix on load
+      generateImportanceValueReport();
     </script>
   </body>
 </html>
