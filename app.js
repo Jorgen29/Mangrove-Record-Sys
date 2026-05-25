@@ -1432,6 +1432,44 @@ function exportCarbonToExcel() {
 }
 
 // ==========================================================================
+// PROJECT COMPONENT 11: DIVERSITY INDEX EXCEL EXPORT UTILITY
+// ==========================================================================
+function exportDiversityToExcel() {
+  try {
+    if (typeof XLSX === "undefined") {
+      alert(
+        "Spreadsheet library is initializing. Please wait 3 seconds and try again.",
+      );
+      return;
+    }
+
+    const tableElement = document
+      .querySelector("#diversityTableBody")
+      .closest("table");
+
+    if (!tableElement) {
+      alert("No data grid found to parse into Excel.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.table_to_sheet(tableElement, { raw: true });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Diversity Index Synthesis",
+    );
+    XLSX.writeFile(
+      workbook,
+      `Shannon_Diversity_Index_Report_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  } catch (error) {
+    console.error("Excel Export Error:", error);
+    alert("An error occurred while compiling your spreadsheet.");
+  }
+}
+// ==========================================================================
 // CENTRALIZED SPECIES CATALOG LOGIC SEED ENGINE
 // ==========================================================================
 /**
