@@ -1585,6 +1585,92 @@ function exportDensityToExcel() {
     alert("An error occurred while compiling your spreadsheet.");
   }
 }
+
+// ==========================================================================
+// PROJECT COMPONENT 15: MEAN VALUE EXCEL EXPORT UTILITY
+// ==========================================================================
+function exportMeanValueToExcel() {
+  try {
+    if (typeof XLSX === "undefined") {
+      alert(
+        "Spreadsheet library is initializing. Please wait 3 seconds and try again.",
+      );
+      return;
+    }
+
+    // Target the table element inside the mean workspace wrapper
+    const tableElement = document.querySelector("#meanWorkspace table");
+
+    if (!tableElement) {
+      alert("No data grid found to parse into Excel.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.table_to_sheet(tableElement, { raw: true });
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Mean Values Matrix");
+    XLSX.writeFile(
+      workbook,
+      `Mean_Values_Matrix_Report_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  } catch (error) {
+    console.error("Excel Export Error:", error);
+    alert("An error occurred while compiling your spreadsheet.");
+  }
+}
+
+// ==========================================================================
+// PROJECT COMPONENT 17: ANALYTICAL REPORT MULTI-TAB EXCEL EXPORT
+// ==========================================================================
+function exportAnalyticsToExcel() {
+  try {
+    if (typeof XLSX === "undefined") {
+      alert(
+        "Spreadsheet library is initializing. Please wait a few seconds and try again.",
+      );
+      return;
+    }
+
+    const container = document.getElementById("dynamicLedgerSection");
+    const tables = container.getElementsByTagName("table");
+
+    if (tables.length === 0) {
+      alert("No data grids found to parse into Excel yet.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    for (let i = 0; i < tables.length; i++) {
+      const tableElement = tables[i];
+      let sheetName = `Plot ${i + 1}`;
+
+      // Look up the closest preceding header tag to dynamically name the Excel tabs safely
+      const parentContainer = tableElement.closest(".table-container");
+      if (parentContainer) {
+        const headerText = parentContainer.querySelector("h5")?.innerText || "";
+        if (headerText) {
+          sheetName = headerText
+            .replace(/Ledger|Matrix|Records/gi, "")
+            .trim()
+            .substring(0, 31);
+        }
+      }
+
+      const worksheet = XLSX.utils.table_to_sheet(tableElement, { raw: true });
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    }
+
+    XLSX.writeFile(
+      workbook,
+      `Consolidated_Species_Metrics_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  } catch (error) {
+    console.error("Excel Generation Error:", error);
+    alert("An error occurred while compiling your spreadsheet report.");
+  }
+}
 // ==========================================================================
 // CENTRALIZED SPECIES CATALOG LOGIC SEED ENGINE
 // ==========================================================================
